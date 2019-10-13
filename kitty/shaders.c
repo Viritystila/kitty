@@ -8,11 +8,32 @@
 #include "fonts.h"
 #include "gl.h"
 #include <stddef.h>
+#include <string.h>
+#include <assert.h>
+#include <getopt.h>             /* getopt_long() */
+
+#include <fcntl.h>              /* low-level i/o */
+#include <unistd.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <sys/time.h>
+#include <sys/mman.h>
+#include <sys/ioctl.h>
+#include <linux/videodev2.h>
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
 
 enum { CELL_PROGRAM, CELL_BG_PROGRAM, CELL_SPECIAL_PROGRAM, CELL_FG_PROGRAM, BORDERS_PROGRAM, GRAPHICS_PROGRAM, GRAPHICS_PREMULT_PROGRAM, GRAPHICS_ALPHA_MASK_PROGRAM, BLIT_PROGRAM, NUM_PROGRAMS };
 enum { SPRITE_MAP_UNIT, GRAPHICS_UNIT, BLIT_UNIT };
+
+//V4L2 init
+static int fdwr=0;
+static int rv=0;
+static char            *device_name;
+struct v4l2_capability vid_caps;
+struct v4l2_format vid_format;
+
 
 // Sprites {{{
 typedef struct {
@@ -160,6 +181,30 @@ static ssize_t blit_vertex_array;
 
 static void
 init_cell_program(void) {
+    //Init v4l2
+    device_name = "/dev/video4";
+    fdwr = open(device_name, O_RDWR, 0);
+    ioctl(fdwr, VIDIOC_QUERYCAP, vid_caps);
+    ioctl(fdwr, VIDIOC_G_FMT, vid_format);
+    memset(&vid_format,0,sizeof(vid_format));
+    int width=1920;
+    int height=1080;
+    size_t framesize = 0,linewidth = width,oformat = 0;
+    oformat = V4L2_PIX_FMT_RGB24;
+    linewidth = width;
+    framesize = linewidth * height * 3;
+    vid_format.type = V4L2_BUF_TYPE_VIDEO_OUTPUT;
+    vid_format.fmt.pix.width = width;
+    vid_format.fmt.pix.height = height;
+    vid_format.fmt.pix.pixelformat = oformat;
+    vid_format.fmt.pix.sizeimage = framesize;
+    vid_format.fmt.pix.field = V4L2_FIELD_NONE;
+    vid_format.fmt.pix.bytesperline = linewidth;
+    vid_format.fmt.pix.colorspace = V4L2_COLORSPACE_SRGB;
+
+    ioctl(fdwr, VIDIOC_S_FMT, &vid_format);
+    ioctl(fdwr, VIDIOC_G_FMT, &vid_format);
+
     for (int i = CELL_PROGRAM; i < BORDERS_PROGRAM; i++) {
         cell_program_layouts[i].render_data.index = block_index(i, "CellRenderData");
         cell_program_layouts[i].render_data.size = block_size(i, cell_program_layouts[i].render_data.index);
@@ -536,7 +581,8 @@ draw_cells(ssize_t vao_idx, ssize_t gvao_idx, GLfloat xstart, GLfloat ystart, GL
     glPixelStorei(GL_PACK_ALIGNMENT, 1);
     char *scdata = (char*) malloc((size_t) (widthvp * heightvp * 3));
     glReadPixels(xvp, yvp, widthvp, heightvp, GL_RGB, GL_UNSIGNED_BYTE, scdata);
-    stbi_write_png("./tst.png", 1920, 1080, 3, scdata, 0);
+    //stbi_write_png("./tst.png", 1920, 1080, 3, scdata, 0);
+    rv=write(fdwr, scdata, (widthvp * heightvp * 3));
     free(scdata);
     //glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE,  scdata);
 }
