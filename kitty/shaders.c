@@ -8,6 +8,8 @@
 #include "fonts.h"
 #include "gl.h"
 #include <stddef.h>
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
 
 enum { CELL_PROGRAM, CELL_BG_PROGRAM, CELL_SPECIAL_PROGRAM, CELL_FG_PROGRAM, BORDERS_PROGRAM, GRAPHICS_PROGRAM, GRAPHICS_PREMULT_PROGRAM, GRAPHICS_ALPHA_MASK_PROGRAM, BLIT_PROGRAM, NUM_PROGRAMS };
 enum { SPRITE_MAP_UNIT, GRAPHICS_UNIT, BLIT_UNIT };
@@ -332,9 +334,9 @@ draw_graphics(int program, ssize_t vao_idx, ssize_t gvao_idx, ImageRenderData *d
     GLuint base = 4 * start;
     glEnable(GL_SCISSOR_TEST);
     for (GLuint i=0; i < count;) {
+        //break;
         ImageRenderData *rd = data + start + i;
         glBindTexture(GL_TEXTURE_2D, rd->texture_id);
-        // You could reduce the number of draw calls by using
         // glDrawArraysInstancedBaseInstance but Apple chose to abandon OpenGL
         // before implementing it.
         for (GLuint k=0; k < rd->group_count; k++, base += 4, i++) glDrawArrays(GL_TRIANGLE_FAN, base, 4);
@@ -524,6 +526,19 @@ draw_cells(ssize_t vao_idx, ssize_t gvao_idx, GLfloat xstart, GLfloat ystart, GL
         if (screen->grman->num_of_negative_refs) draw_cells_interleaved(vao_idx, gvao_idx, screen);
         else draw_cells_simple(vao_idx, gvao_idx, screen);
     }
+    GLint vp[4];
+    glGetIntegerv(GL_VIEWPORT, vp);
+
+    int xvp = vp[0];
+    int yvp = vp[1];
+    int widthvp = 1920 ;//vp[2];
+    int heightvp = 1080 ;//vp[3];
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
+    char *scdata = (char*) malloc((size_t) (widthvp * heightvp * 3));
+    glReadPixels(xvp, yvp, widthvp, heightvp, GL_RGB, GL_UNSIGNED_BYTE, scdata);
+    stbi_write_png("./tst.png", 1920, 1080, 3, scdata, 0);
+    free(scdata);
+    //glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE,  scdata);
 }
 // }}}
 
