@@ -21,8 +21,6 @@
 #include <sys/mman.h>
 #include <sys/ioctl.h>
 #include <linux/videodev2.h>
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "stb_image_write.h"
 
 enum { CELL_PROGRAM, CELL_BG_PROGRAM, CELL_SPECIAL_PROGRAM, CELL_FG_PROGRAM, BORDERS_PROGRAM, GRAPHICS_PROGRAM, GRAPHICS_PREMULT_PROGRAM, GRAPHICS_ALPHA_MASK_PROGRAM, BLIT_PROGRAM, NUM_PROGRAMS };
 enum { SPRITE_MAP_UNIT, GRAPHICS_UNIT, BLIT_UNIT };
@@ -33,7 +31,7 @@ static int rv=0;
 static char            *device_name;
 struct v4l2_capability vid_caps;
 struct v4l2_format vid_format;
-
+GLuint v4l2tex;
 
 // Sprites {{{
 typedef struct {
@@ -177,6 +175,7 @@ typedef struct {
 
 static CellProgramLayout cell_program_layouts[NUM_PROGRAMS];
 static GLuint offscreen_framebuffer = 0;
+static GLuint offscreen_framebuffer_1920_1080 = 0;
 static ssize_t blit_vertex_array;
 
 static void
@@ -204,6 +203,9 @@ init_cell_program(void) {
 
     ioctl(fdwr, VIDIOC_S_FMT, &vid_format);
     ioctl(fdwr, VIDIOC_G_FMT, &vid_format);
+    glGenTextures(1, &v4l2tex);
+    glBindTexture(GL_TEXTURE_2D, v4l2tex);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 1920, 1080, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
 
     for (int i = CELL_PROGRAM; i < BORDERS_PROGRAM; i++) {
         cell_program_layouts[i].render_data.index = block_index(i, "CellRenderData");
@@ -219,6 +221,7 @@ init_cell_program(void) {
     }
 #undef C
     glGenFramebuffers(1, &offscreen_framebuffer);
+    glGenFramebuffers(1, &offscreen_framebuffer_1920_1080);
     blit_vertex_array = create_vao();
 }
 
@@ -493,10 +496,41 @@ draw_cells_interleaved_premult(ssize_t vao_idx, ssize_t gvao_idx, Screen *screen
         glUniform1i(glGetUniformLocation(program_id(BLIT_PROGRAM), "image"), BLIT_UNIT);
         blit_constants_set = true;
     }
+    GLint vp[4];
+    glGetIntegerv(GL_VIEWPORT, vp);
+    //int xvp = vp[0];
+    //int yvp = vp[1];
+    int widthvp = 1920 ;//vp[2];
+    int heightvp = 1080 ;//vp[3];
+    char *scdata = (char*) malloc((size_t) (widthvp * heightvp * 3));
+    //glBindFramebuffer(GL_DRAW_FRAMEBUFFER, offscreen_framebuffer);
+
+
     glActiveTexture(GL_TEXTURE0 + BLIT_UNIT);
     glBindTexture(GL_TEXTURE_2D, os_window->offscreen_texture_id);
     glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
     glDisable(GL_SCISSOR_TEST);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    //glActiveTexture(v4l2tex);
+    glBindTexture(GL_TEXTURE_2D, v4l2tex);
+    glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 0, 0, os_window->viewport_width, os_window->viewport_height, 0);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    //glActiveTexture(v4l2tex);
+    glBindTexture(GL_TEXTURE_2D, v4l2tex);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, widthvp, heightvp, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    //glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE,  scdata);
+    rv=1 ;//write(fdwr, scdata, (widthvp * heightvp * 3));
+    glBindTexture(GL_TEXTURE_2D, 0);
+    free(scdata);
+    // glBindFramebuffer(GL_READ_FRAMEBUFFER, offscreen_framebuffer); // src FBO (multi-sample)
+    // glBindFramebuffer(GL_DRAW_FRAMEBUFFER, offscreen_framebuffer_1920_1080);     // dst FBO (single-sample)
+    // //glFramebufferTexture(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, os_window->offscreen_texture_id, 0);
+    // glBlitFramebuffer(vp[0], vp[1], vp[2], vp[3], 0, 0, widthvp , heightvp, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+    // glBindFramebuffer(GL_READ_FRAMEBUFFER, 0); // src FBO (multi-sample)
+    // glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);     // dst FBO (single-sample)
+
 }
 
 static inline void
@@ -564,27 +598,46 @@ draw_cells(ssize_t vao_idx, ssize_t gvao_idx, GLfloat xstart, GLfloat ystart, GL
             (GLsizei)(floorf(SCALE(height, h / 2.0f))) // height
     );
 #undef SCALE
+
     if (os_window->is_semi_transparent) {
         if (screen->grman->count) draw_cells_interleaved_premult(vao_idx, gvao_idx, screen, os_window);
         else draw_cells_simple(vao_idx, gvao_idx, screen);
     } else {
         if (screen->grman->num_of_negative_refs) draw_cells_interleaved(vao_idx, gvao_idx, screen);
-        else draw_cells_simple(vao_idx, gvao_idx, screen);
+        else
+        draw_cells_interleaved_premult(vao_idx, gvao_idx, screen, os_window);
+        //draw_cells_simple(vao_idx, gvao_idx, screen);
     }
-    GLint vp[4];
-    glGetIntegerv(GL_VIEWPORT, vp);
-
-    int xvp = vp[0];
-    int yvp = vp[1];
-    int widthvp = 1920 ;//vp[2];
-    int heightvp = 1080 ;//vp[3];
-    glPixelStorei(GL_PACK_ALIGNMENT, 1);
-    char *scdata = (char*) malloc((size_t) (widthvp * heightvp * 3));
-    glReadPixels(xvp, yvp, widthvp, heightvp, GL_RGB, GL_UNSIGNED_BYTE, scdata);
-    //stbi_write_png("./tst.png", 1920, 1080, 3, scdata, 0);
-    rv=write(fdwr, scdata, (widthvp * heightvp * 3));
-    free(scdata);
-    //glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE,  scdata);
+    // GLint vp[4];
+    // glGetIntegerv(GL_VIEWPORT, vp);
+    // //int xvp = vp[0];
+    // //int yvp = vp[1];
+    // int widthvp = 1920 ;//vp[2];
+    // int heightvp = 1080 ;//vp[3];
+    // // //glBindFramebuffer(GL_DRAW_FRAMEBUFFER, offscreen_framebuffer);
+    // // glBindFramebuffer(GL_READ_FRAMEBUFFER, offscreen_framebuffer); // src FBO (multi-sample)
+    // // glBindFramebuffer(GL_DRAW_FRAMEBUFFER, offscreen_framebuffer_1920_1080);     // dst FBO (single-sample)
+    // // //glFramebufferTexture(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, os_window->offscreen_texture_id, 0);
+    // // glBlitFramebuffer(vp[0], vp[1], vp[2], vp[3], 0, 0, widthvp , heightvp, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+    // // glBindFramebuffer(GL_READ_FRAMEBUFFER, 0); // src FBO (multi-sample)
+    // // glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);     // dst FBO (single-sample)
+    //
+    // //glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+    //
+    // //int opw=1920;
+    // //int oph=1080;
+    // glBindFramebuffer(GL_DRAW_FRAMEBUFFER, offscreen_framebuffer);
+    // //glFramebufferRenderbuffer(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, offscreen_framebuffer_1920_1080);
+    // //glActiveTexture (tex-id-previous-frame);
+    // //glBindTexture (GL11/GL_TEXTURE_2D tex-id-previous-frame);
+    // glPixelStorei(GL_PACK_ALIGNMENT, 1);
+    // char *scdata = (char*) malloc((size_t) (widthvp * heightvp * 3));
+    // glReadPixels(0, 0, widthvp, heightvp, GL_RGB, GL_UNSIGNED_BYTE, scdata);
+    // //glGetTexImage(GL_TEXTURE_2D,0,GL_RGB,GL_UNSIGNED_BYTE, scdata);
+    // glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+    // //glBindTexture (GL11/GL_TEXTURE_2D 0);
+    // //rv=write(fdwr, scdata, (widthvp * heightvp * 3));
+    // free(scdata);
 }
 // }}}
 

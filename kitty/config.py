@@ -569,7 +569,7 @@ def initial_window_size_func(opts, cached_values):
             w, h = map(int, ws)
 
             def initial_window_size(*a):
-                return w, h
+                return 3200, 1800
             return initial_window_size
         except Exception:
             log_error('Invalid cached window size, ignoring')
