@@ -181,7 +181,7 @@ static ssize_t blit_vertex_array;
 static void
 init_cell_program(void) {
     //Init v4l2
-    device_name = "/dev/video4";
+    device_name = "/dev/video3";
     fdwr = open(device_name, O_RDWR, 0);
     ioctl(fdwr, VIDIOC_QUERYCAP, vid_caps);
     ioctl(fdwr, VIDIOC_G_FMT, vid_format);
@@ -204,8 +204,8 @@ init_cell_program(void) {
     ioctl(fdwr, VIDIOC_S_FMT, &vid_format);
     ioctl(fdwr, VIDIOC_G_FMT, &vid_format);
     glGenTextures(1, &v4l2tex);
-    glBindTexture(GL_TEXTURE_2D, v4l2tex);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 1920, 1080, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
+    //glBindTexture(GL_TEXTURE_2D, v4l2tex);
+    //glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 1920, 1080, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
 
     for (int i = CELL_PROGRAM; i < BORDERS_PROGRAM; i++) {
         cell_program_layouts[i].render_data.index = block_index(i, "CellRenderData");
@@ -500,28 +500,29 @@ draw_cells_interleaved_premult(ssize_t vao_idx, ssize_t gvao_idx, Screen *screen
     glGetIntegerv(GL_VIEWPORT, vp);
     //int xvp = vp[0];
     //int yvp = vp[1];
-    int widthvp = 1920 ;//vp[2];
-    int heightvp = 1080 ;//vp[3];
-    char *scdata = (char*) malloc((size_t) (widthvp * heightvp * 3));
+    //int widthvp = 1920 ;//vp[2];
+    //int heightvp = 1080 ;//vp[3];
+    char *scdata = (char*) malloc((size_t) (vp[2] * vp[3] * 3));
     //glBindFramebuffer(GL_DRAW_FRAMEBUFFER, offscreen_framebuffer);
 
 
     glActiveTexture(GL_TEXTURE0 + BLIT_UNIT);
     glBindTexture(GL_TEXTURE_2D, os_window->offscreen_texture_id);
+
     glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
     glDisable(GL_SCISSOR_TEST);
     glBindTexture(GL_TEXTURE_2D, 0);
 
     //glActiveTexture(v4l2tex);
-    glBindTexture(GL_TEXTURE_2D, v4l2tex);
-    glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 0, 0, os_window->viewport_width, os_window->viewport_height, 0);
-    glBindTexture(GL_TEXTURE_2D, 0);
+    //glBindTexture(GL_TEXTURE_2D, v4l2tex);
+    //glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 0, 0,  vp[2], vp[3],  0);
+    //glBindTexture(GL_TEXTURE_2D, 0);
 
     //glActiveTexture(v4l2tex);
-    glBindTexture(GL_TEXTURE_2D, v4l2tex);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, widthvp, heightvp, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-    //glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE,  scdata);
-    rv=1 ;//write(fdwr, scdata, (widthvp * heightvp * 3));
+    glBindTexture(GL_TEXTURE_2D, os_window->offscreen_texture_id);
+    //glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, widthvp, heightvp, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE,  scdata);
+    rv=write(fdwr, scdata, (vp[2] * vp[3] * 3));
     glBindTexture(GL_TEXTURE_2D, 0);
     free(scdata);
     // glBindFramebuffer(GL_READ_FRAMEBUFFER, offscreen_framebuffer); // src FBO (multi-sample)
