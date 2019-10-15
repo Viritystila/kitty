@@ -504,7 +504,6 @@ create_os_window(PyObject UNUSED *self, PyObject *args) {
     char *title, *wm_class_class, *wm_class_name;
     PyObject *load_programs = NULL, *get_window_size, *pre_show_callback;
     if (!PyArg_ParseTuple(args, "OOsss|Oii", &get_window_size, &pre_show_callback, &title, &wm_class_name, &wm_class_class, &load_programs, &x, &y)) return NULL;
-
     static bool is_first_window = true;
     if (is_first_window) {
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, OPENGL_REQUIRED_VERSION_MAJOR);
@@ -512,7 +511,7 @@ create_os_window(PyObject UNUSED *self, PyObject *args) {
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
         glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, true);
         glfwWindowHint(GLFW_RESIZABLE, false);
-
+        glfwWindowHint(GLFW_DECORATED, false);
         // We don't use depth and stencil buffers
         glfwWindowHint(GLFW_DEPTH_BITS, 0);
         glfwWindowHint(GLFW_STENCIL_BITS, 0);

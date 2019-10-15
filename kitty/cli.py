@@ -152,7 +152,6 @@ def parse_option_spec(spec=None):
         prev_line = line
     if current_cmd is not None:
         (seq if current_cmd.get('condition', True) else disabled).append(current_cmd)
-
     return seq, disabled
 
 
@@ -564,6 +563,14 @@ type=choices
 default=normal
 choices=normal,fullscreen,maximized,minimized
 Control how the initial kitty window is created.
+
+
+--v4l2_res
+Set the v4l2 resolution
+
+
+--v4l2_dev
+Set the v4l2 device
 
 
 # Debugging options

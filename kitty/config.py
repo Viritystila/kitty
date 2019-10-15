@@ -561,7 +561,13 @@ def cached_values_for(name):
             err))
 
 
-def initial_window_size_func(opts, cached_values):
+def initial_window_size_func(opts, cached_values, args):
+    v4l2_w=0
+    v4l2_h=0
+    if args.v4l2_res:
+        v4l2_res=args.v4l2_res.split('x')
+        v4l2_w=int(v4l2_res[0])
+        v4l2_h=int(v4l2_res[1])
 
     if 'window-size' in cached_values and opts.remember_window_size:
         ws = cached_values['window-size']
@@ -569,7 +575,10 @@ def initial_window_size_func(opts, cached_values):
             w, h = map(int, ws)
 
             def initial_window_size(*a):
-                return 3200, 1800
+                if args.v4l2_res:
+                    return v4l2_w, v4l2_h
+                else:
+                    return w, h
             return initial_window_size
         except Exception:
             log_error('Invalid cached window size, ignoring')
