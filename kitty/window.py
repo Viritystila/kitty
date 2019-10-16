@@ -89,10 +89,13 @@ def load_shader_programs(semi_transparent=False):
     }.items():
         ff = f.replace('ALPHA_TYPE', which)
         compile_program(p, v, ff)
-    init_cell_program()
+    init_cell_program(str.encode(load_shader_programs.v4l2_dev))
+    #init_cell_program(b"/dev/video3")
+
 
 
 load_shader_programs.use_selection_fg = True
+load_shader_programs.v4l2_dev="NULL"
 
 
 def setup_colors(screen, opts):

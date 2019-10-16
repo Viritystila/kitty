@@ -117,6 +117,10 @@ def get_new_os_window_trigger(opts):
 
 
 def _run_app(opts, args, bad_lines=()):
+    v4l2_dev_input=args.v4l2_dev
+    if not v4l2_dev_input:
+        print(v4l2_dev_input)
+        v4l2_dev_input="NULL"
     new_os_window_trigger = get_new_os_window_trigger(opts)
     if is_macos and opts.macos_custom_beam_cursor:
         set_custom_ibeam_cursor()
@@ -124,14 +128,17 @@ def _run_app(opts, args, bad_lines=()):
         with open(logo_data_file, 'rb') as f:
             set_default_window_icon(f.read(), 256, 256)
     load_shader_programs.use_selection_fg = opts.selection_foreground is not None
+    load_shader_programs.v4l2_dev=v4l2_dev_input
     with cached_values_for(run_app.cached_values_name) as cached_values:
         with startup_notification_handler(extra_callback=run_app.first_window_callback) as pre_show_callback:
-            print(args.cls)
             window_id = create_os_window(
                     run_app.initial_window_size_func(opts, cached_values, args),
                     pre_show_callback,
-                    appname, args.name or args.cls or appname,
-                    args.cls or appname, load_all_shaders)
+                    appname,
+                    args.name or args.cls or appname,
+                    args.cls or appname,
+                    v4l2_dev_input,
+                    load_all_shaders)
         boss = Boss(window_id, opts, args, cached_values, new_os_window_trigger)
         boss.start()
         if bad_lines:

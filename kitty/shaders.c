@@ -178,31 +178,31 @@ static GLuint offscreen_framebuffer = 0;
 static GLuint offscreen_framebuffer_1920_1080 = 0;
 static ssize_t blit_vertex_array;
 
-static void
-init_cell_program(void) {
-    //Init v4l2
-    device_name = "/dev/video3";
-    fdwr = open(device_name, O_RDWR, 0);
-    ioctl(fdwr, VIDIOC_QUERYCAP, vid_caps);
-    ioctl(fdwr, VIDIOC_G_FMT, vid_format);
-    memset(&vid_format,0,sizeof(vid_format));
-    int width=1920;
-    int height=1080;
-    size_t framesize = 0,linewidth = width,oformat = 0;
-    oformat = V4L2_PIX_FMT_RGB24;
-    linewidth = width;
-    framesize = linewidth * height * 3;
-    vid_format.type = V4L2_BUF_TYPE_VIDEO_OUTPUT;
-    vid_format.fmt.pix.width = width;
-    vid_format.fmt.pix.height = height;
-    vid_format.fmt.pix.pixelformat = oformat;
-    vid_format.fmt.pix.sizeimage = framesize;
-    vid_format.fmt.pix.field = V4L2_FIELD_NONE;
-    vid_format.fmt.pix.bytesperline = linewidth;
-    vid_format.fmt.pix.colorspace = V4L2_COLORSPACE_SRGB;
 
-    ioctl(fdwr, VIDIOC_S_FMT, &vid_format);
-    ioctl(fdwr, VIDIOC_G_FMT, &vid_format);
+static void init_cell_program(char *v4l2_dev_input) {
+    device_name = v4l2_dev_input;
+    if (strcmp(device_name, "NULL")!=0){
+      fdwr = open(device_name, O_RDWR, 0);
+      ioctl(fdwr, VIDIOC_QUERYCAP, vid_caps);
+      ioctl(fdwr, VIDIOC_G_FMT, vid_format);
+      memset(&vid_format,0,sizeof(vid_format));
+      int width=1920;
+      int height=1080;
+      size_t framesize = 0,linewidth = width,oformat = 0;
+      oformat = V4L2_PIX_FMT_RGB24;
+      linewidth = width;
+      framesize = linewidth * height * 3;
+      vid_format.type = V4L2_BUF_TYPE_VIDEO_OUTPUT;
+      vid_format.fmt.pix.width = width;
+      vid_format.fmt.pix.height = height;
+      vid_format.fmt.pix.pixelformat = oformat;
+      vid_format.fmt.pix.sizeimage = framesize;
+      vid_format.fmt.pix.field = V4L2_FIELD_NONE;
+      vid_format.fmt.pix.bytesperline = linewidth;
+      vid_format.fmt.pix.colorspace = V4L2_COLORSPACE_SRGB;
+      ioctl(fdwr, VIDIOC_S_FMT, &vid_format);
+      ioctl(fdwr, VIDIOC_G_FMT, &vid_format);
+    }
     glGenTextures(1, &v4l2tex);
     //glBindTexture(GL_TEXTURE_2D, v4l2tex);
     //glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 1920, 1080, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
@@ -496,15 +496,6 @@ draw_cells_interleaved_premult(ssize_t vao_idx, ssize_t gvao_idx, Screen *screen
         glUniform1i(glGetUniformLocation(program_id(BLIT_PROGRAM), "image"), BLIT_UNIT);
         blit_constants_set = true;
     }
-    GLint vp[4];
-    glGetIntegerv(GL_VIEWPORT, vp);
-    //int xvp = vp[0];
-    //int yvp = vp[1];
-    //int widthvp = 1920 ;//vp[2];
-    //int heightvp = 1080 ;//vp[3];
-    char *scdata = (char*) malloc((size_t) (vp[2] * vp[3] * 3));
-    //glBindFramebuffer(GL_DRAW_FRAMEBUFFER, offscreen_framebuffer);
-
 
     glActiveTexture(GL_TEXTURE0 + BLIT_UNIT);
     glBindTexture(GL_TEXTURE_2D, os_window->offscreen_texture_id);
@@ -512,27 +503,17 @@ draw_cells_interleaved_premult(ssize_t vao_idx, ssize_t gvao_idx, Screen *screen
     glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
     glDisable(GL_SCISSOR_TEST);
     glBindTexture(GL_TEXTURE_2D, 0);
-
-    //glActiveTexture(v4l2tex);
-    //glBindTexture(GL_TEXTURE_2D, v4l2tex);
-    //glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 0, 0,  vp[2], vp[3],  0);
-    //glBindTexture(GL_TEXTURE_2D, 0);
-
-    //glActiveTexture(v4l2tex);
-    glBindTexture(GL_TEXTURE_2D, os_window->offscreen_texture_id);
-    //glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, widthvp, heightvp, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-    glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE,  scdata);
-    rv=write(fdwr, scdata, (vp[2] * vp[3] * 3));
-    glBindTexture(GL_TEXTURE_2D, 0);
-    free(scdata);
-    // glBindFramebuffer(GL_READ_FRAMEBUFFER, offscreen_framebuffer); // src FBO (multi-sample)
-    // glBindFramebuffer(GL_DRAW_FRAMEBUFFER, offscreen_framebuffer_1920_1080);     // dst FBO (single-sample)
-    // //glFramebufferTexture(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, os_window->offscreen_texture_id, 0);
-    // glBlitFramebuffer(vp[0], vp[1], vp[2], vp[3], 0, 0, widthvp , heightvp, GL_COLOR_BUFFER_BIT, GL_NEAREST);
-    // glBindFramebuffer(GL_READ_FRAMEBUFFER, 0); // src FBO (multi-sample)
-    // glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);     // dst FBO (single-sample)
-
-}
+    if (strcmp(device_name, "NULL")!=0){
+      GLint vp[4];
+      glGetIntegerv(GL_VIEWPORT, vp);
+      char *scdata = (char*) malloc((size_t) (vp[2] * vp[3] * 3));
+      glBindTexture(GL_TEXTURE_2D, os_window->offscreen_texture_id);
+      glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE,  scdata);
+      rv=write(fdwr, scdata, (vp[2] * vp[3] * 3));
+      glBindTexture(GL_TEXTURE_2D, 0);
+      free(scdata);
+    }
+  }
 
 static inline void
 set_cell_uniforms(float current_inactive_text_alpha) {
@@ -609,36 +590,6 @@ draw_cells(ssize_t vao_idx, ssize_t gvao_idx, GLfloat xstart, GLfloat ystart, GL
         draw_cells_interleaved_premult(vao_idx, gvao_idx, screen, os_window);
         //draw_cells_simple(vao_idx, gvao_idx, screen);
     }
-    // GLint vp[4];
-    // glGetIntegerv(GL_VIEWPORT, vp);
-    // //int xvp = vp[0];
-    // //int yvp = vp[1];
-    // int widthvp = 1920 ;//vp[2];
-    // int heightvp = 1080 ;//vp[3];
-    // // //glBindFramebuffer(GL_DRAW_FRAMEBUFFER, offscreen_framebuffer);
-    // // glBindFramebuffer(GL_READ_FRAMEBUFFER, offscreen_framebuffer); // src FBO (multi-sample)
-    // // glBindFramebuffer(GL_DRAW_FRAMEBUFFER, offscreen_framebuffer_1920_1080);     // dst FBO (single-sample)
-    // // //glFramebufferTexture(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, os_window->offscreen_texture_id, 0);
-    // // glBlitFramebuffer(vp[0], vp[1], vp[2], vp[3], 0, 0, widthvp , heightvp, GL_COLOR_BUFFER_BIT, GL_NEAREST);
-    // // glBindFramebuffer(GL_READ_FRAMEBUFFER, 0); // src FBO (multi-sample)
-    // // glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);     // dst FBO (single-sample)
-    //
-    // //glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-    //
-    // //int opw=1920;
-    // //int oph=1080;
-    // glBindFramebuffer(GL_DRAW_FRAMEBUFFER, offscreen_framebuffer);
-    // //glFramebufferRenderbuffer(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, offscreen_framebuffer_1920_1080);
-    // //glActiveTexture (tex-id-previous-frame);
-    // //glBindTexture (GL11/GL_TEXTURE_2D tex-id-previous-frame);
-    // glPixelStorei(GL_PACK_ALIGNMENT, 1);
-    // char *scdata = (char*) malloc((size_t) (widthvp * heightvp * 3));
-    // glReadPixels(0, 0, widthvp, heightvp, GL_RGB, GL_UNSIGNED_BYTE, scdata);
-    // //glGetTexImage(GL_TEXTURE_2D,0,GL_RGB,GL_UNSIGNED_BYTE, scdata);
-    // glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-    // //glBindTexture (GL11/GL_TEXTURE_2D 0);
-    // //rv=write(fdwr, scdata, (widthvp * heightvp * 3));
-    // free(scdata);
 }
 // }}}
 
@@ -708,7 +659,7 @@ draw_borders(ssize_t vao_idx, unsigned int num_border_rects, BorderRect *rect_bu
 // Python API {{{
 static PyObject*
 compile_program(PyObject UNUSED *self, PyObject *args) {
-    const char *vertex_shader, *fragment_shader;
+    const char *vertex_shader, *fragment_shader;//, *v4l2_dev;
     int which;
     GLuint vertex_shader_id = 0, fragment_shader_id = 0;
     if (!PyArg_ParseTuple(args, "iss", &which, &vertex_shader, &fragment_shader)) return NULL;
@@ -745,6 +696,7 @@ end:
 #define PYWRAP1(name) static PyObject* py##name(PyObject UNUSED *self, PyObject *args)
 #define PA(fmt, ...) if(!PyArg_ParseTuple(args, fmt, __VA_ARGS__)) return NULL;
 #define ONE_INT(name) PYWRAP1(name) { name(PyLong_AsSsize_t(args)); Py_RETURN_NONE; }
+#define ONE_STR(name) PYWRAP1(name) { name(PyBytes_AS_STRING(args)); Py_RETURN_NONE; }
 #define TWO_INT(name) PYWRAP1(name) { int a, b; PA("ii", &a, &b); name(a, b); Py_RETURN_NONE; }
 #define NO_ARG(name) PYWRAP0(name) { name(); Py_RETURN_NONE; }
 #define NO_ARG_INT(name) PYWRAP0(name) { return PyLong_FromSsize_t(name()); }
@@ -764,7 +716,7 @@ TWO_INT(unmap_vao_buffer)
 
 NO_ARG(init_borders_program)
 
-NO_ARG(init_cell_program)
+ONE_STR(init_cell_program)
 
 static PyObject*
 sprite_map_set_limits(PyObject UNUSED *self, PyObject *args) {
@@ -789,7 +741,7 @@ static PyMethodDef module_methods[] = {
     MW(bind_program, METH_O),
     MW(unbind_program, METH_NOARGS),
     MW(init_borders_program, METH_NOARGS),
-    MW(init_cell_program, METH_NOARGS),
+    MW(init_cell_program, METH_O),
 
     {NULL, NULL, 0, NULL}        /* Sentinel */
 };
