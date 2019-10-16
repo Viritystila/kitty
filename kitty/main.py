@@ -126,6 +126,7 @@ def _run_app(opts, args, bad_lines=()):
     load_shader_programs.use_selection_fg = opts.selection_foreground is not None
     with cached_values_for(run_app.cached_values_name) as cached_values:
         with startup_notification_handler(extra_callback=run_app.first_window_callback) as pre_show_callback:
+            print(args.cls)
             window_id = create_os_window(
                     run_app.initial_window_size_func(opts, cached_values, args),
                     pre_show_callback,

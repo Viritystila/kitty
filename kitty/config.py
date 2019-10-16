@@ -573,7 +573,6 @@ def initial_window_size_func(opts, cached_values, args):
         ws = cached_values['window-size']
         try:
             w, h = map(int, ws)
-
             def initial_window_size(*a):
                 if args.v4l2_res:
                     return v4l2_w, v4l2_h
