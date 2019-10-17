@@ -119,15 +119,16 @@ def get_new_os_window_trigger(opts):
 def _run_app(opts, args, bad_lines=()):
     v4l2_dev_input=args.v4l2_dev
     v4l2_res_input=args.v4l2_res
-    v4l2_res=v4l2_res_input.split('x')
-    v4l2_w=int(v4l2_res[0])
-    v4l2_h=int(v4l2_res[1])
+    if v4l2_res_input:
+        v4l2_res=v4l2_res_input.split('x')
+        v4l2_w=int(v4l2_res[0])
+        v4l2_h=int(v4l2_res[1])
+    else:
+        v4l2_w=-1
+        v4l2_h=-1
     if not v4l2_dev_input:
         print(v4l2_dev_input)
         v4l2_dev_input="NULL"
-        v4l2_w=-1
-        v4l2_h=-1
-
     new_os_window_trigger = get_new_os_window_trigger(opts)
     if is_macos and opts.macos_custom_beam_cursor:
         set_custom_ibeam_cursor()

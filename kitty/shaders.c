@@ -510,15 +510,6 @@ draw_cells_interleaved_premult(ssize_t vao_idx, ssize_t gvao_idx, Screen *screen
     glDisable(GL_SCISSOR_TEST);
     glBindTexture(GL_TEXTURE_2D, 0);
     write_to_v4l2_dev(os_window);
-    // if (fdwr!=-1){
-    //   GLint vp[4];
-    //   glGetIntegerv(GL_VIEWPORT, vp);
-    //   //char *scdata = (char*) malloc((size_t) (vp[2] * vp[3] * 3));
-    //   glBindTexture(GL_TEXTURE_2D, os_window->offscreen_texture_id);
-    //   glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE,  scdata);
-    //   rv=write(fdwr, scdata, (vp[2] * vp[3] * 3));
-    //   glBindTexture(GL_TEXTURE_2D, 0);
-    // }
   }
 
 static inline void
