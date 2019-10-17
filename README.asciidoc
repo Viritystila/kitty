@@ -2,4 +2,16 @@
 
 See https://sw.kovidgoyal.net/kitty
 
+This fork of Kitty allows feeding the terminal to V4L2 Loopback device.
+
+Example:
+sudo modprobe v4l2loopback devices=3
+sudo v4l2loopback-ctl set-caps "video/x-raw,format=RGB,width=3200,height=1800" /dev/video3
+v4l2loopback-ctl set-fps 5 /dev/video3 
+kitty/launcher/kitty --v4l2_res 3200x1800 --v4l2_dev /dev/video3
+
+The recorded feed will be upside down to to OpenGL.
+
+
+
 image:https://circleci.com/gh/kovidgoyal/kitty.svg?style=svg["Build status", link="https://circleci.com/gh/kovidgoyal/kitty"]

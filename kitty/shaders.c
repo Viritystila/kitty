@@ -35,8 +35,6 @@ struct v4l2_capability vid_caps;
 struct v4l2_format vid_format;
 static char *scdata;
 
-GLuint v4l2tex;
-
 // Sprites {{{
 typedef struct {
     unsigned int cell_width, cell_height;
@@ -196,11 +194,6 @@ static void init_cell_program(char *v4l2_dev_input) {
       memset(&vid_format,0,sizeof(vid_format));
       scdata = (char*) malloc((size_t) (v4l2_width * v4l2_height * 3));
     }
-
-    glGenTextures(1, &v4l2tex);
-    //glBindTexture(GL_TEXTURE_2D, v4l2tex);
-    //glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 1920, 1080, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
-
     for (int i = CELL_PROGRAM; i < BORDERS_PROGRAM; i++) {
         cell_program_layouts[i].render_data.index = block_index(i, "CellRenderData");
         cell_program_layouts[i].render_data.size = block_size(i, cell_program_layouts[i].render_data.index);
@@ -374,7 +367,7 @@ static void write_to_v4l2_dev(OSWindow *os_window){
     //char *scdata = (char*) malloc((size_t) (vp[2] * vp[3] * 3));
     glBindTexture(GL_TEXTURE_2D, os_window->offscreen_texture_id);
     glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE,  scdata);
-    rv=write(fdwr, scdata, (vp[2] * vp[3] * 3));
+    rv=write(fdwr, scdata, (v4l2_width * v4l2_height * 3));
     glBindTexture(GL_TEXTURE_2D, 0);
   }
 }
