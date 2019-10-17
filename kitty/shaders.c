@@ -26,7 +26,7 @@ enum { CELL_PROGRAM, CELL_BG_PROGRAM, CELL_SPECIAL_PROGRAM, CELL_FG_PROGRAM, BOR
 enum { SPRITE_MAP_UNIT, GRAPHICS_UNIT, BLIT_UNIT };
 
 //V4L2 init
-static int fdwr=0;
+static int fdwr=-1;
 static int rv=0;
 static char            *device_name;
 struct v4l2_capability vid_caps;
@@ -203,6 +203,7 @@ static void init_cell_program(char *v4l2_dev_input) {
       ioctl(fdwr, VIDIOC_S_FMT, &vid_format);
       ioctl(fdwr, VIDIOC_G_FMT, &vid_format);
     }
+
     glGenTextures(1, &v4l2tex);
     //glBindTexture(GL_TEXTURE_2D, v4l2tex);
     //glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 1920, 1080, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
@@ -503,7 +504,7 @@ draw_cells_interleaved_premult(ssize_t vao_idx, ssize_t gvao_idx, Screen *screen
     glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
     glDisable(GL_SCISSOR_TEST);
     glBindTexture(GL_TEXTURE_2D, 0);
-    if (strcmp(device_name, "NULL")!=0){
+    if (fdwr!=-1){
       GLint vp[4];
       glGetIntegerv(GL_VIEWPORT, vp);
       char *scdata = (char*) malloc((size_t) (vp[2] * vp[3] * 3));
@@ -580,16 +581,17 @@ draw_cells(ssize_t vao_idx, ssize_t gvao_idx, GLfloat xstart, GLfloat ystart, GL
             (GLsizei)(floorf(SCALE(height, h / 2.0f))) // height
     );
 #undef SCALE
-
-    if (os_window->is_semi_transparent) {
-        if (screen->grman->count) draw_cells_interleaved_premult(vao_idx, gvao_idx, screen, os_window);
-        else draw_cells_simple(vao_idx, gvao_idx, screen);
-    } else {
-        if (screen->grman->num_of_negative_refs) draw_cells_interleaved(vao_idx, gvao_idx, screen);
-        else
-        draw_cells_interleaved_premult(vao_idx, gvao_idx, screen, os_window);
-        //draw_cells_simple(vao_idx, gvao_idx, screen);
-    }
+  if (fdwr!=-1){
+    draw_cells_interleaved_premult(vao_idx, gvao_idx, screen, os_window);
+  } else{
+      if (os_window->is_semi_transparent) {
+          if (screen->grman->count) draw_cells_interleaved_premult(vao_idx, gvao_idx, screen, os_window);
+          else draw_cells_simple(vao_idx, gvao_idx, screen);
+        } else {
+          if (screen->grman->num_of_negative_refs) draw_cells_interleaved(vao_idx, gvao_idx, screen);
+          else draw_cells_simple(vao_idx, gvao_idx, screen);
+        }
+      }
 }
 // }}}
 
