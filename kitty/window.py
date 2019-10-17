@@ -20,7 +20,7 @@ from .fast_data_types import (
     GRAPHICS_ALPHA_MASK_PROGRAM, GRAPHICS_PREMULT_PROGRAM, GRAPHICS_PROGRAM,
     OSC, REVERSE, SCROLL_FULL, SCROLL_LINE, SCROLL_PAGE, STRIKETHROUGH, Screen,
     add_window, cell_size_for_window, compile_program, get_clipboard_string,
-    init_cell_program, set_clipboard_string, set_titlebar_color,
+    init_cell_program, set_clipboard_string, set_titlebar_color,set_v4l2_resolution,
     set_window_render_data, update_window_title, update_window_visibility,
     viewport_for_window
 )
@@ -89,10 +89,13 @@ def load_shader_programs(semi_transparent=False):
     }.items():
         ff = f.replace('ALPHA_TYPE', which)
         compile_program(p, v, ff)
+    set_v4l2_resolution((load_shader_programs.v4l2_width, load_shader_programs.v4l2_height))
     init_cell_program(str.encode(load_shader_programs.v4l2_dev))
 
 load_shader_programs.use_selection_fg = True
 load_shader_programs.v4l2_dev="NULL"
+load_shader_programs.v4l2_width=-1
+load_shader_programs.v4l2_height=-1
 
 
 def setup_colors(screen, opts):

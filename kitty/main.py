@@ -118,9 +118,16 @@ def get_new_os_window_trigger(opts):
 
 def _run_app(opts, args, bad_lines=()):
     v4l2_dev_input=args.v4l2_dev
+    v4l2_res_input=args.v4l2_res
+    v4l2_res=v4l2_res_input.split('x')
+    v4l2_w=int(v4l2_res[0])
+    v4l2_h=int(v4l2_res[1])
     if not v4l2_dev_input:
         print(v4l2_dev_input)
         v4l2_dev_input="NULL"
+        v4l2_w=-1
+        v4l2_h=-1
+
     new_os_window_trigger = get_new_os_window_trigger(opts)
     if is_macos and opts.macos_custom_beam_cursor:
         set_custom_ibeam_cursor()
@@ -129,6 +136,8 @@ def _run_app(opts, args, bad_lines=()):
             set_default_window_icon(f.read(), 256, 256)
     load_shader_programs.use_selection_fg = opts.selection_foreground is not None
     load_shader_programs.v4l2_dev=v4l2_dev_input
+    load_shader_programs.v4l2_width=v4l2_w
+    load_shader_programs.v4l2_height=v4l2_h
     with cached_values_for(run_app.cached_values_name) as cached_values:
         with startup_notification_handler(extra_callback=run_app.first_window_callback) as pre_show_callback:
             window_id = create_os_window(

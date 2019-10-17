@@ -28,9 +28,13 @@ enum { SPRITE_MAP_UNIT, GRAPHICS_UNIT, BLIT_UNIT };
 //V4L2 init
 static int fdwr=-1;
 static int rv=0;
+static int v4l2_width=-1;
+static int v4l2_height=-1;
 static char            *device_name;
 struct v4l2_capability vid_caps;
 struct v4l2_format vid_format;
+static char *scdata;
+
 GLuint v4l2tex;
 
 // Sprites {{{
@@ -178,6 +182,10 @@ static GLuint offscreen_framebuffer = 0;
 static GLuint offscreen_framebuffer_1920_1080 = 0;
 static ssize_t blit_vertex_array;
 
+static void set_v4l2_resolution(int w, int h){
+  v4l2_width=w;
+  v4l2_height=h;
+}
 
 static void init_cell_program(char *v4l2_dev_input) {
     device_name = v4l2_dev_input;
@@ -186,22 +194,7 @@ static void init_cell_program(char *v4l2_dev_input) {
       ioctl(fdwr, VIDIOC_QUERYCAP, vid_caps);
       ioctl(fdwr, VIDIOC_G_FMT, vid_format);
       memset(&vid_format,0,sizeof(vid_format));
-      int width=1920;
-      int height=1080;
-      size_t framesize = 0,linewidth = width,oformat = 0;
-      oformat = V4L2_PIX_FMT_RGB24;
-      linewidth = width;
-      framesize = linewidth * height * 3;
-      vid_format.type = V4L2_BUF_TYPE_VIDEO_OUTPUT;
-      vid_format.fmt.pix.width = width;
-      vid_format.fmt.pix.height = height;
-      vid_format.fmt.pix.pixelformat = oformat;
-      vid_format.fmt.pix.sizeimage = framesize;
-      vid_format.fmt.pix.field = V4L2_FIELD_NONE;
-      vid_format.fmt.pix.bytesperline = linewidth;
-      vid_format.fmt.pix.colorspace = V4L2_COLORSPACE_SRGB;
-      ioctl(fdwr, VIDIOC_S_FMT, &vid_format);
-      ioctl(fdwr, VIDIOC_G_FMT, &vid_format);
+      scdata = (char*) malloc((size_t) (v4l2_width * v4l2_height * 3));
     }
 
     glGenTextures(1, &v4l2tex);
@@ -423,6 +416,10 @@ draw_centered_alpha_mask(ssize_t gvao_idx, size_t screen_width, size_t screen_he
     glDisable(GL_BLEND);
 }
 
+// static void write_to_v4l2_dev(){
+//
+// }
+
 static void
 draw_cells_simple(ssize_t vao_idx, ssize_t gvao_idx, Screen *screen) {
     bind_program(CELL_PROGRAM);
@@ -507,12 +504,12 @@ draw_cells_interleaved_premult(ssize_t vao_idx, ssize_t gvao_idx, Screen *screen
     if (fdwr!=-1){
       GLint vp[4];
       glGetIntegerv(GL_VIEWPORT, vp);
-      char *scdata = (char*) malloc((size_t) (vp[2] * vp[3] * 3));
+      //char *scdata = (char*) malloc((size_t) (vp[2] * vp[3] * 3));
       glBindTexture(GL_TEXTURE_2D, os_window->offscreen_texture_id);
       glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE,  scdata);
       rv=write(fdwr, scdata, (vp[2] * vp[3] * 3));
       glBindTexture(GL_TEXTURE_2D, 0);
-      free(scdata);
+      //free(scdata);
     }
   }
 
@@ -719,6 +716,7 @@ TWO_INT(unmap_vao_buffer)
 NO_ARG(init_borders_program)
 
 ONE_STR(init_cell_program)
+TWO_INT(set_v4l2_resolution)
 
 static PyObject*
 sprite_map_set_limits(PyObject UNUSED *self, PyObject *args) {
@@ -744,6 +742,7 @@ static PyMethodDef module_methods[] = {
     MW(unbind_program, METH_NOARGS),
     MW(init_borders_program, METH_NOARGS),
     MW(init_cell_program, METH_O),
+    MW(set_v4l2_resolution, METH_O),
 
     {NULL, NULL, 0, NULL}        /* Sentinel */
 };
