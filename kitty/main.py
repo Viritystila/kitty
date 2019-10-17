@@ -126,7 +126,7 @@ def _run_app(opts, args, bad_lines=()):
     else:
         v4l2_w=-1
         v4l2_h=-1
-    if not v4l2_dev_input:
+    if not v4l2_dev_input or not v4l2_res_input:
         print(v4l2_dev_input)
         v4l2_dev_input="NULL"
     new_os_window_trigger = get_new_os_window_trigger(opts)
