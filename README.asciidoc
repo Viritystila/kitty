@@ -14,9 +14,9 @@ v4l2loopback-ctl set-fps 5 /dev/video*
 
 kitty/launcher/kitty --v4l2_res 3200x1800 --v4l2_dev /dev/video*
 
-, where video* is for example video1
+, where video* is for example video1. If v4l2 mode is set, the window size is fixed, chnage the width and height both in the v4l2loopback-ctl and in --v4l2_res to your liking, they need to be the same though.
 
-The recorded feed will be upside down to to OpenGL.
+The recorded feed might be upside down to to OpenGL.
 
 
 
