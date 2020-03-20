@@ -381,8 +381,6 @@ static void write_to_v4l2_dev(OSWindow *os_window){
       rv=write(fdwr, ptr, (v4l2_width * v4l2_height * 3));
       glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
     }
-    //glGetTexImage(GL_TEXTURE_2D, 0, GL_BGR, GL_UNSIGNED_BYTE,  scdata);
-    //rv=write(fdwr, scdata, (v4l2_width * v4l2_height * 3));
     glBindTexture(GL_TEXTURE_2D, 0);
   }
 }
