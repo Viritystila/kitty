@@ -189,8 +189,8 @@ static void set_v4l2_resolution(int w, int h){
 static void init_cell_program(char *v4l2_dev_input) {
     device_name = v4l2_dev_input;
     if (strcmp(device_name, "NULL")!=0){
-      //PBO
-      glGenBuffers(GL_PIXEL_PACK_BUFFER, &pbo_id);
+      // //PBO  GL_PIXEL_PACK_BUFFER
+      glGenBuffers(1, &pbo_id);
       glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo_id);
       glBufferData(GL_PIXEL_PACK_BUFFER, v4l2_width * v4l2_height * 3, NULL, GL_STREAM_READ);
       glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
@@ -373,8 +373,16 @@ static void write_to_v4l2_dev(OSWindow *os_window){
     glGetIntegerv(GL_VIEWPORT, vp);
     glBindTexture(GL_TEXTURE_2D, os_window->offscreen_texture_id);
     glPixelStorei(GL_PACK_ALIGNMENT, 1);
-    glGetTexImage(GL_TEXTURE_2D, 0, GL_BGR, GL_UNSIGNED_BYTE,  scdata);
-    rv=write(fdwr, scdata, (v4l2_width * v4l2_height * 3));
+    glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo_id);
+    glReadPixels(0, 0, v4l2_width, v4l2_height, GL_BGR, GL_UNSIGNED_BYTE, 0);
+    GLubyte* ptr = (GLubyte*)glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
+    if(ptr)
+    {
+      rv=write(fdwr, ptr, (v4l2_width * v4l2_height * 3));
+      glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
+    }
+    //glGetTexImage(GL_TEXTURE_2D, 0, GL_BGR, GL_UNSIGNED_BYTE,  scdata);
+    //rv=write(fdwr, scdata, (v4l2_width * v4l2_height * 3));
     glBindTexture(GL_TEXTURE_2D, 0);
   }
 }
