@@ -236,6 +236,31 @@ unmap_buffer(ssize_t idx) {
 
 // }}}
 
+// Pixel Buffer Objects (PBO)
+// typedef struct {
+//     GLuint id;
+//     size_t num_buffers;
+//     ssize_t buffers[10];
+// } PBO;
+//
+// static PBO pbos[4*MAX_CHILDREN + 10] = {{0}};
+//
+// ssize_t
+// create_pbo(void) {
+//     GLuint vao_id;
+//     glGenVertexArrays(1, &vao_id);
+//     for (size_t i = 0; i < sizeof(vaos)/sizeof(vaos[0]); i++) {
+//         if (!vaos[i].id) {
+//             vaos[i].id = vao_id;
+//             vaos[i].num_buffers = 0;
+//             glBindVertexArray(vao_id);
+//             return i;
+//         }
+//     }
+//     glDeleteVertexArrays(1, &vao_id);
+//     fatal("Too many VAOs");
+//     return -1;
+// }
 // Vertex Array Objects (VAO) {{{
 
 typedef struct {

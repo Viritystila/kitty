@@ -34,6 +34,7 @@ static char            *device_name;
 struct v4l2_capability vid_caps;
 struct v4l2_format vid_format;
 static char *scdata;
+static GLuint pbo_id=0;
 
 // Sprites {{{
 typedef struct {
@@ -188,6 +189,12 @@ static void set_v4l2_resolution(int w, int h){
 static void init_cell_program(char *v4l2_dev_input) {
     device_name = v4l2_dev_input;
     if (strcmp(device_name, "NULL")!=0){
+      //PBO
+      glGenBuffers(GL_PIXEL_PACK_BUFFER, &pbo_id);
+      glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo_id);
+      glBufferData(GL_PIXEL_PACK_BUFFER, v4l2_width * v4l2_height * 3, NULL, GL_STREAM_READ);
+      glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+      // V4l2
       fdwr = open(device_name, O_RDWR, 0);
       ioctl(fdwr, VIDIOC_QUERYCAP, vid_caps);
       ioctl(fdwr, VIDIOC_G_FMT, vid_format);
